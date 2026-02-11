@@ -1,0 +1,15 @@
+<h2>User Management</h2>
+
+<form method="POST">
+  <input name="username" placeholder="New Username">
+  <input name="password" placeholder="Password">
+  <button>Add User</button>
+</form>
+
+<ul>
+{% for u in users %}
+<li>{{u.username}} - {{u.role}} <a href="/delete/{{u.username}}">Delete</a></li>
+{% endfor %}
+</ul>
+
+<a href="/dashboard">Back</a>

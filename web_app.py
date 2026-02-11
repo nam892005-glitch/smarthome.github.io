@@ -1,65 +1,91 @@
 from flask import Flask, render_template, request, redirect, session
 import paho.mqtt.client as mqtt
 from pymongo import MongoClient
+import json
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "smarthome_secret"
 
-# ===== MongoDB =====
+# ================== MONGODB ==================
 client = MongoClient("mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/")
 db = client["smarthome"]
 users_col = db["users"]
 logs_col = db["logs"]
 
-# ===== MQTT =====
+# ================== MQTT ==================
 mqtt_client = mqtt.Client()
+
+def on_connect(client, userdata, flags, rc):
+    print("✅ MQTT Connected:", rc)
+    client.subscribe("namhome/#")  # nghe toàn bộ hệ thống
+
+def on_message(client, userdata, msg):
+    payload = msg.payload.decode()
+    print("RAW:", msg.topic, payload)
+
+    # Lưu log DB
+    logs_col.insert_one({
+        "topic": msg.topic,
+        "message": payload,
+        "time": datetime.now()
+    })
+
+mqtt_client.on_connect = on_connect
+mqtt_client.on_message = on_message
+
 mqtt_client.connect("broker.emqx.io", 1883, 60)
 mqtt_client.loop_start()
 
-# ===== Login =====
+# ================== LOGIN ==================
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         user = request.form["username"]
         pw = request.form["password"]
+
         u = users_col.find_one({"username": user, "password": pw})
         if u:
             session["user"] = user
             session["role"] = u["role"]
             return redirect("/dashboard")
+
     return render_template("login.html")
 
-# ===== Dashboard =====
+# ================== DASHBOARD ==================
 @app.route("/dashboard")
 def dashboard():
     if "user" not in session:
         return redirect("/")
     return render_template("dashboard.html", user=session["user"], role=session["role"])
 
-# ===== Door =====
+# ================== DOOR ==================
 @app.route("/door/open")
 def door_open():
-    mqtt_client.publish("namhome/door/cmd", '{"user":"%s"}' % session["user"])
+    mqtt_client.publish("namhome/door/cmd",
+                        json.dumps({"user": session["user"]}))
     return redirect("/dashboard")
 
-# ===== Light =====
+# ================== LIGHT ==================
 @app.route("/light/on")
 def light_on():
-    mqtt_client.publish("namhome/light/cmd", '{"user":"%s","state":"ON"}' % session["user"])
+    mqtt_client.publish("namhome/light/cmd",
+                        json.dumps({"user": session["user"], "state": "ON"}))
     return redirect("/dashboard")
 
 @app.route("/light/off")
 def light_off():
-    mqtt_client.publish("namhome/light/cmd", '{"user":"%s","state":"OFF"}' % session["user"])
+    mqtt_client.publish("namhome/light/cmd",
+                        json.dumps({"user": session["user"], "state": "OFF"}))
     return redirect("/dashboard")
 
-# ===== Logs =====
+# ================== LOGS ==================
 @app.route("/logs")
 def logs():
     data = logs_col.find().sort("time", -1)
     return render_template("logs.html", logs=data)
 
-# ===== Admin user control =====
+# ================== ADMIN USER ==================
 @app.route("/users", methods=["GET", "POST"])
 def users():
     if session.get("role") != "admin":
@@ -70,8 +96,7 @@ def users():
         pw = request.form["password"]
         users_col.insert_one({"username": new_user, "password": pw, "role": "member"})
 
-    all_users = users_col.find()
-    return render_template("users.html", users=all_users)
+    return render_template("users.html", users=users_col.find())
 
 @app.route("/delete/<username>")
 def delete_user(username):
@@ -79,11 +104,12 @@ def delete_user(username):
         users_col.delete_one({"username": username})
     return redirect("/users")
 
-# ===== Logout =====
+# ================== LOGOUT ==================
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
 
+# ================== RUN ==================
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)

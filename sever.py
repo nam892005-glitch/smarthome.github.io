@@ -4,8 +4,8 @@ import paho.mqtt.client as mqtt
 from pymongo import MongoClient
 
 # ================== MONGODB ==================
-mongo_client = MongoClient("mongodb://localhost:27017/")
-db = mongo_client["smarthome"]
+client = MongoClient("mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/")
+db = client["smarthome"]
 users_col = db["users"]
 logs_col = db["logs"]
 

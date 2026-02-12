@@ -13,7 +13,7 @@ users_col = db["users"]
 logs_col = db["logs"]
 
 # MQTT client
-mqtt_client = mqtt.Client()
+mqtt_client = mqtt.Client(protocol=mqtt.MQTTv311)
 mqtt_client.connect("broker.emqx.io", 1883, 60)
 mqtt_client.loop_start()
 
@@ -48,6 +48,7 @@ def light():
         "user": session["user"],
         "state": request.form["state"]
     }
+    print("Publishing:", data)
     mqtt_client.publish("namhome/light/cmd", json.dumps(data))
     return redirect("/dashboard")
 
@@ -102,3 +103,4 @@ def logout():
 
 if __name__ == "__main__":
     app.run(debug=True)
+

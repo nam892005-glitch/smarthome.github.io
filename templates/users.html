@@ -1,17 +1,21 @@
 <h2>User Management</h2>
 
 <form action="/add_user" method="post">
-<input name="username" placeholder="username">
-<input name="password" placeholder="password">
-<select name="role">
-<option>admin</option>
-<option>member</option>
-</select>
-<button>Add</button>
+  <input name="username" placeholder="Username">
+  <input name="password" placeholder="Password">
+  <select name="role">
+    <option value="user">User</option>
+    <option value="admin">Admin</option>
+  </select>
+  <button>Add</button>
 </form>
 
 <ul>
 {% for u in users %}
-<li>{{u.username}} - {{u.role}} <a href="/delete_user/{{u.username}}">Delete</a></li>
+<li>{{u.username}} ({{u.role}})
+<a href="/delete_user/{{u.username}}">Delete</a>
+</li>
 {% endfor %}
 </ul>
+
+<a href="/dashboard">Back</a>

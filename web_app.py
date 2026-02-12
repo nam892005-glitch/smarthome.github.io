@@ -1,75 +1,69 @@
-from flask import Flask, render_template, request, redirect, session
-import paho.mqtt.client as mqtt
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from pymongo import MongoClient
-import json
+import datetime
+import os
 
 app = Flask(__name__)
-app.secret_key = "smarthome_secret"
+CORS(app)
 
-# ===== MongoDB =====
-client_db = MongoClient("mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/")
-db = client_db["smarthome"]
-users_col = db["users"]
-logs_col = db["logs"]
+# ===== MongoDB Atlas =====
+MONGO_URI = os.getenv("MONGO_URI")  # set trong Render Environment
+client = MongoClient(MONGO_URI)
+db = client["smarthome"]
+logs_collection = db["logs"]
 
-# ===== MQTT =====
-BROKER = "broker.emqx.io"
-PORT = 1883
+# ==========================
+@app.route("/")
+def home():
+    return "Server is running!"
 
-mqtt_client = mqtt.Client()
+# ===== API MỞ CỬA =====
+@app.route("/open_door", methods=["POST"])
+def open_door():
+    print(">> OPEN DOOR pressed")
 
-def on_connect(client, userdata, flags, rc):
-    print("✅ MQTT Connected:", rc)
-    client.subscribe("namhome/#")
+    logs_collection.insert_one({
+        "action": "open_door",
+        "time": datetime.datetime.utcnow()
+    })
 
-def on_message(client, userdata, msg):
-    print("📩 MQTT:", msg.topic, msg.payload.decode())
+    return jsonify({"status": "Door opened"})
 
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
-mqtt_client.connect(BROKER, PORT, 60)
-mqtt_client.loop_start()
 
-# ===== Login =====
-@app.route("/", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        user = request.form["username"]
-        pw = request.form["password"]
-        u = users_col.find_one({"username": user, "password": pw})
-        if u:
-            session["user"] = user
-            session["role"] = u["role"]
-            return redirect("/dashboard")
-    return render_template("login.html")
-
-# ===== Dashboard =====
-@app.route("/dashboard")
-def dashboard():
-    if "user" not in session:
-        return redirect("/")
-    return render_template("dashboard.html", user=session["user"], role=session["role"])
-
-# ===== Door =====
-@app.route("/door/open")
-def door_open():
-    mqtt_client.publish("namhome/door/cmd", json.dumps({"user": session["user"]}))
-    print("🚪 Web gửi lệnh mở cửa")
-    return redirect("/dashboard")
-
-# ===== Light =====
-@app.route("/light/on")
+# ===== API BẬT ĐÈN =====
+@app.route("/light_on", methods=["POST"])
 def light_on():
-    mqtt_client.publish("namhome/light/cmd", json.dumps({"user": session["user"], "state": "ON"}))
-    print("💡 Web bật đèn")
-    return redirect("/dashboard")
+    print(">> LIGHT ON pressed")
 
-@app.route("/light/off")
+    logs_collection.insert_one({
+        "action": "light_on",
+        "time": datetime.datetime.utcnow()
+    })
+
+    return jsonify({"status": "Light ON"})
+
+
+# ===== API TẮT ĐÈN =====
+@app.route("/light_off", methods=["POST"])
 def light_off():
-    mqtt_client.publish("namhome/light/cmd", json.dumps({"user": session["user"], "state": "OFF"}))
-    print("💡 Web tắt đèn")
-    return redirect("/dashboard")
+    print(">> LIGHT OFF pressed")
 
-# ===== Run =====
+    logs_collection.insert_one({
+        "action": "light_off",
+        "time": datetime.datetime.utcnow()
+    })
+
+    return jsonify({"status": "Light OFF"})
+
+
+# ===== LẤY LOG =====
+@app.route("/logs", methods=["GET"])
+def get_logs():
+    logs = list(logs_collection.find({}, {"_id": 0}))
+    return jsonify(logs)
+
+
+# ===== PORT Render =====
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))

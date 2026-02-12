@@ -1,26 +1,31 @@
 <h2>SMART HOME</h2>
+<p>User: {{user}} | Role: {{role}}</p>
 
 <form action="/door" method="post">
-<button>Open Door</button>
+  <button>Open Door</button>
 </form>
 
 <form action="/light" method="post">
-<button name="state" value="on">Light ON</button>
-<button name="state" value="off">Light OFF</button>
+  <button name="state" value="on">Light ON</button>
+  <button name="state" value="off">Light OFF</button>
 </form>
+
+{% if role == "admin" %}
+<a href="/users">Manage Users</a>
+{% endif %}
 
 <h3>Logs</h3>
 <ul id="logs"></ul>
 
 <script>
 async function loadLogs(){
- let r = await fetch("/logs");
- let data = await r.json();
- let ul = document.getElementById("logs");
- ul.innerHTML="";
- data.forEach(l=>{
-  ul.innerHTML+=`<li>${l.user} - ${l.action} - ${l.time}</li>`;
- });
+  let res = await fetch("/logs");
+  let data = await res.json();
+  let ul = document.getElementById("logs");
+  ul.innerHTML="";
+  data.forEach(l=>{
+    ul.innerHTML += `<li>${l.user} - ${l.action} - ${l.time}</li>`;
+  });
 }
 setInterval(loadLogs,2000);
 </script>

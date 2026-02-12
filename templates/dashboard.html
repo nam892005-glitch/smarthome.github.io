@@ -1,22 +1,31 @@
-<h2>Welcome {{user}} ({{role}})</h2>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Home</title>
+</head>
+<body>
+<h2>SMART HOME</h2>
 
-<button onclick="fetch('/door',{method:'POST'})">Open Door</button>
-
-<form action="/light" method="post">
-  <button name="state" value="ON">Light ON</button>
-  <button name="state" value="OFF">Light OFF</button>
-</form>
+<button onclick="fetch('/open_door',{method:'POST'})">Open Door</button>
+<button onclick="fetch('/light_on',{method:'POST'})">Light ON</button>
+<button onclick="fetch('/light_off',{method:'POST'})">Light OFF</button>
 
 <h3>Logs</h3>
 <ul id="logs"></ul>
 
 <script>
-setInterval(()=>{
- fetch("/logs").then(r=>r.json()).then(d=>{
-  document.getElementById("logs").innerHTML =
-   d.map(x=>`<li>${x.time} - ${x.user} - ${x.action}</li>`).join("")
- })
-},2000)
+function loadLogs(){
+    fetch('/logs')
+    .then(res=>res.json())
+    .then(data=>{
+        let ul = document.getElementById("logs")
+        ul.innerHTML=""
+        data.forEach(l=>{
+            ul.innerHTML += `<li>${l.time} - ${l.user} - ${l.action}</li>`
+        })
+    })
+}
+setInterval(loadLogs,2000)
 </script>
-
-<a href="/users">Manage Users</a>
+</body>
+</html>

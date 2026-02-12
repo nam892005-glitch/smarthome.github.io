@@ -1,88 +1,70 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, request, jsonify
 import paho.mqtt.client as mqtt
-from pymongo import MongoClient
 import json
+import os
+import time
 
 app = Flask(__name__)
-app.secret_key = "smarthome_secret"
 
-# ================= MONGODB =================
-client_db = MongoClient(
-    "mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/"
-)
-db = client_db["smarthome"]
-users_col = db["users"]
-
-# ================= MQTT =================
+# ===== MQTT CONFIG =====
 BROKER = "broker.emqx.io"
 PORT = 1883
+TOPIC_CMD = "namhome/door/cmd"
+TOPIC_STATUS = "namhome/door/status"
 
-mqtt_client = mqtt.Client()
-
+# ===== MQTT CALLBACKS =====
 def on_connect(client, userdata, flags, rc):
-    print("✅ MQTT Connected:", rc)
+    print("✅ MQTT Connected with result code", rc)
+    client.subscribe("namhome/#")
+    print("📡 Subscribed to namhome/#")
 
+def on_message(client, userdata, msg):
+    print(f"📩 RAW: {msg.topic} {msg.payload.decode()}")
+    if msg.topic == TOPIC_STATUS:
+        print("🚪 Door status:", msg.payload.decode())
+
+def on_disconnect(client, userdata, rc):
+    print("❌ MQTT Disconnected. Reconnecting...")
+    while True:
+        try:
+            client.reconnect()
+            print("🔁 Reconnected MQTT")
+            break
+        except:
+            time.sleep(5)
+
+# ===== CREATE MQTT CLIENT =====
+mqtt_client = mqtt.Client()
 mqtt_client.on_connect = on_connect
+mqtt_client.on_message = on_message
+mqtt_client.on_disconnect = on_disconnect
+
 mqtt_client.connect(BROKER, PORT, 60)
-mqtt_client.loop_start()
+mqtt_client.loop_start()   # 🔥 QUAN TRỌNG: chạy nền
 
-# ================= LOGIN =================
-@app.route("/", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        user = request.form["username"]
-        pw = request.form["password"]
+print("🚀 MQTT background thread started")
 
-        u = users_col.find_one({"username": user, "password": pw})
-        if u:
-            session["user"] = user
-            session["role"] = u["role"]
-            return redirect("/dashboard")
+# ===== WEB ROUTES =====
+@app.route("/")
+def home():
+    return "Smart Home Server Running 🚀"
 
-    return render_template("login.html")
+@app.route("/open", methods=["POST"])
+def open_door():
+    data = {
+        "user": "nam",
+        "action": "open"
+    }
+    mqtt_client.publish(TOPIC_CMD, json.dumps(data))
+    print("📤 Sent OPEN command")
+    return jsonify({"status": "sent open"})
 
-# ================= DASHBOARD =================
-@app.route("/dashboard")
-def dashboard():
-    if "user" not in session:
-        return redirect("/")
-    return render_template("dashboard.html", user=session["user"])
-
-# ================= DOOR =================
-@app.route("/door/open")
-def door_open():
-    mqtt_client.publish(
-        "namhome/door/cmd",
-        json.dumps({"user": session["user"]})
-    )
-    print("🚪 Web gửi mở cửa")
-    return redirect("/dashboard")
-
-# ================= LIGHT =================
-@app.route("/light/on")
-def light_on():
-    mqtt_client.publish(
-        "namhome/light/cmd",
-        json.dumps({"user": session["user"], "state": "ON"})
-    )
-    print("💡 Web bật đèn")
-    return redirect("/dashboard")
-
-@app.route("/light/off")
-def light_off():
-    mqtt_client.publish(
-        "namhome/light/cmd",
-        json.dumps({"user": session["user"], "state": "OFF"})
-    )
-    print("💡 Web tắt đèn")
-    return redirect("/dashboard")
-
-# ================= LOGOUT =================
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
-
-# ================= RUN =================
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+@app.route("/close", methods=["POST"])
+def close_door():
+    data = {
+        "user": "nam",
+        "action": "close"
+    }
+    mqtt_client.publish(TOPIC_CMD, json.dumps(data))
+    print("📤 Sent CLOSE command")
+    return jsonify({"status": "sent close"})

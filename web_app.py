@@ -40,16 +40,24 @@ def dashboard():
 # ===== DOOR =====
 @app.route("/door", methods=["POST"])
 def door():
-    mqtt_client.publish("namhome/door/cmd",
-                        json.dumps({"user": session["user"]}))
+    mqtt_client.publish(
+        "namhome/door/cmd",
+        json.dumps({"user": session["user"]})
+    )
     return "OK"
 
 # ===== LIGHT =====
 @app.route("/light", methods=["POST"])
 def light():
     state = request.form["state"]
-    mqtt_client.publish("namhome/light/cmd",
-                        json.dumps({"user": session["user"], "state": state}))
+
+    mqtt_client.publish(
+        "namhome/light/cmd",
+        json.dumps({
+            "user": session["user"],
+            "state": state
+        })
+    )
     return "OK"
 
 # ===== LOGS =====
@@ -60,3 +68,4 @@ def logs():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+

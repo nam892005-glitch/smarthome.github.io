@@ -1,22 +1,18 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Smart Home</title>
-</head>
-<body>
-    <h1>Smart Home Control</h1>
+<h2>Welcome {{user}} ({{role}})</h2>
 
-    <button onclick="fetch('/open_door',{method:'POST'})">
-        Open Door
-    </button>
+<h3>Door</h3>
+<a href="/door/open"><button>Open Door</button></a>
 
-    <button onclick="fetch('/light_on',{method:'POST'})">
-        Light ON
-    </button>
+<h3>Light</h3>
+<a href="/light/on"><button>Light ON</button></a>
+<a href="/light/off"><button>Light OFF</button></a>
 
-    <button onclick="fetch('/light_off',{method:'POST'})">
-        Light OFF
-    </button>
+<br><br>
+<a href="/logs"><button>View Logs</button></a>
 
-</body>
-</html>
+{% if role == "admin" %}
+<a href="/users"><button>Manage Users</button></a>
+{% endif %}
+
+<br><br>
+<a href="/logout">Logout</a>

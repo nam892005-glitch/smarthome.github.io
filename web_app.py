@@ -6,8 +6,9 @@ import json, os, datetime
 app = Flask(__name__)
 app.secret_key = "smarthome_secret"
 
-client_db = MongoClient(os.getenv("MONGO_URI"))
-db = client_db["smarthome"]
+MONGO_URI = "mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/"
+mongo = MongoClient(MONGO_URI)
+db = mongo["smarthome"]
 users_col = db["users"]
 logs_col = db["logs"]
 

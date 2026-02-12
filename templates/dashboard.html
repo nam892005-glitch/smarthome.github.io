@@ -6,9 +6,19 @@
 <body>
 <h2>SMART HOME</h2>
 
-<button onclick="fetch('/open_door',{method:'POST'})">Open Door</button>
-<button onclick="fetch('/light_on',{method:'POST'})">Light ON</button>
-<button onclick="fetch('/light_off',{method:'POST'})">Light OFF</button>
+<button onclick="fetch('/door', {method:'POST'})">Open Door</button>
+
+<button onclick="fetch('/light', {
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'state=ON'
+})">Light ON</button>
+
+<button onclick="fetch('/light', {
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'state=OFF'
+})">Light OFF</button>
 
 <h3>Logs</h3>
 <ul id="logs"></ul>
@@ -18,14 +28,15 @@ function loadLogs(){
     fetch('/logs')
     .then(res=>res.json())
     .then(data=>{
-        let ul = document.getElementById("logs")
+        let ul=document.getElementById("logs")
         ul.innerHTML=""
         data.forEach(l=>{
-            ul.innerHTML += `<li>${l.time} - ${l.user} - ${l.action}</li>`
+            ul.innerHTML+=`<li>${l.time} - ${l.user} - ${l.action}</li>`
         })
     })
 }
 setInterval(loadLogs,2000)
 </script>
+
 </body>
 </html>

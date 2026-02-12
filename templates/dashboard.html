@@ -1,4 +1,4 @@
-<h2>Welcome {{user}} ({{role}})</h2>
+<h2>Xin chào {{user}} ({{role}})</h2>
 
 <button onclick="door()">🚪 Open Door</button>
 <button onclick="light('ON')">💡 ON</button>
@@ -7,21 +7,26 @@
 <h3 id="state">Device: --</h3>
 
 <script>
-async function door(){await fetch("/door",{method:"POST"})}
+async function door(){
+  await fetch("/door",{method:"POST"})
+}
 async function light(s){
- await fetch("/light",{method:"POST",
- headers:{"Content-Type":"application/x-www-form-urlencoded"},
- body:"state="+s})
+  await fetch("/light",{
+    method:"POST",
+    headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:"state="+s
+  })
 }
-
-async function status(){
- let r=await fetch("/status");let d=await r.json();
- if(d.result) document.getElementById("state").innerText="Device: "+d.result
+async function update(){
+  let r=await fetch("/status")
+  let d=await r.json()
+  document.getElementById("state").innerText="Device: "+d.result
 }
-setInterval(status,1000);
+setInterval(update,1000)
 </script>
 
 {% if role=="admin" %}
 <a href="/users">👤 Manage Users</a>
 {% endif %}
 <a href="/logs">📜 Logs</a>
+<a href="/logout">🚪 Logout</a>

@@ -1,18 +1,22 @@
 <h2>Welcome {{user}} ({{role}})</h2>
 
-<h3>Door</h3>
-<a href="/door/open"><button>Open Door</button></a>
+<button onclick="fetch('/door',{method:'POST'})">Open Door</button>
 
-<h3>Light</h3>
-<a href="/light/on"><button>Light ON</button></a>
-<a href="/light/off"><button>Light OFF</button></a>
+<form action="/light" method="post">
+  <button name="state" value="ON">Light ON</button>
+  <button name="state" value="OFF">Light OFF</button>
+</form>
 
-<br><br>
-<a href="/logs"><button>View Logs</button></a>
+<h3>Logs</h3>
+<ul id="logs"></ul>
 
-{% if role == "admin" %}
-<a href="/users"><button>Manage Users</button></a>
-{% endif %}
+<script>
+setInterval(()=>{
+ fetch("/logs").then(r=>r.json()).then(d=>{
+  document.getElementById("logs").innerHTML =
+   d.map(x=>`<li>${x.time} - ${x.user} - ${x.action}</li>`).join("")
+ })
+},2000)
+</script>
 
-<br><br>
-<a href="/logout">Logout</a>
+<a href="/users">Manage Users</a>

@@ -1,75 +1,83 @@
-from flask import Flask, render_template, request, redirect, session
-import paho.mqtt.client as mqtt
+from flask import Flask, render_template, request, redirect, session, jsonify
+from flask_cors import CORS
 from pymongo import MongoClient
-import json
+import paho.mqtt.client as mqtt
+import json, os, datetime
 
 app = Flask(__name__)
 app.secret_key = "smarthome_secret"
+CORS(app)
 
 # ===== MongoDB =====
-client_db = MongoClient("mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/")
-db = client_db["smarthome"]
+client = MongoClient(os.getenv("MONGO_URI"))
+db = client["smarthome"]
 users_col = db["users"]
 logs_col = db["logs"]
 
 # ===== MQTT =====
-BROKER = "broker.emqx.io"
-PORT = 1883
-
 mqtt_client = mqtt.Client()
-
-def on_connect(client, userdata, flags, rc):
-    print("✅ MQTT Connected:", rc)
-    client.subscribe("namhome/#")
-
-def on_message(client, userdata, msg):
-    print("📩 MQTT:", msg.topic, msg.payload.decode())
-
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
-mqtt_client.connect(BROKER, PORT, 60)
+mqtt_client.connect("broker.emqx.io", 1883, 60)
 mqtt_client.loop_start()
 
-# ===== Login =====
+# ========== LOGIN ==========
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         user = request.form["username"]
-        pw = request.form["password"]
-        u = users_col.find_one({"username": user, "password": pw})
+        pwd = request.form["password"]
+        u = users_col.find_one({"username": user, "password": pwd})
         if u:
             session["user"] = user
             session["role"] = u["role"]
             return redirect("/dashboard")
     return render_template("login.html")
 
-# ===== Dashboard =====
+# ========== DASHBOARD ==========
 @app.route("/dashboard")
 def dashboard():
     if "user" not in session:
         return redirect("/")
     return render_template("dashboard.html", user=session["user"], role=session["role"])
 
-# ===== Door =====
-@app.route("/door/open")
-def door_open():
+# ========== CONTROL ==========
+@app.route("/door", methods=["POST"])
+def door():
     mqtt_client.publish("namhome/door/cmd", json.dumps({"user": session["user"]}))
-    print("🚪 Web gửi lệnh mở cửa")
-    return redirect("/dashboard")
+    return "OK"
 
-# ===== Light =====
-@app.route("/light/on")
-def light_on():
-    mqtt_client.publish("namhome/light/cmd", json.dumps({"user": session["user"], "state": "ON"}))
-    print("💡 Web bật đèn")
-    return redirect("/dashboard")
+@app.route("/light", methods=["POST"])
+def light():
+    state = request.form["state"]
+    mqtt_client.publish("namhome/light/cmd", json.dumps({"user": session["user"], "state": state}))
+    return "OK"
 
-@app.route("/light/off")
-def light_off():
-    mqtt_client.publish("namhome/light/cmd", json.dumps({"user": session["user"], "state": "OFF"}))
-    print("💡 Web tắt đèn")
-    return redirect("/dashboard")
+# ========== LOGS ==========
+@app.route("/logs")
+def logs():
+    data = list(logs_col.find({}, {"_id": 0}).sort("time", -1).limit(20))
+    return jsonify(data)
 
-# ===== Run =====
+# ========== USER MGMT ==========
+@app.route("/users")
+def users():
+    if session["role"] != "admin":
+        return "No permission"
+    data = list(users_col.find({}, {"_id": 0}))
+    return render_template("users.html", users=data)
+
+@app.route("/add_user", methods=["POST"])
+def add_user():
+    users_col.insert_one({
+        "username": request.form["username"],
+        "password": request.form["password"],
+        "role": request.form["role"]
+    })
+    return redirect("/users")
+
+@app.route("/delete_user/<u>")
+def delete_user(u):
+    users_col.delete_one({"username": u})
+    return redirect("/users")
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))

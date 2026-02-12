@@ -1,55 +1,26 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>SMART HOME</title>
-</head>
-<body>
-    <h1>SMART HOME</h1>
+<h2>SMART HOME</h2>
 
-    <button onclick="openDoor()">Open Door</button>
-    <button onclick="lightOn()">Light ON</button>
-    <button onclick="lightOff()">Light OFF</button>
+<form action="/door" method="post">
+<button>Open Door</button>
+</form>
 
-    <h2>Logs</h2>
-    <ul id="logs"></ul>
+<form action="/light" method="post">
+<button name="state" value="on">Light ON</button>
+<button name="state" value="off">Light OFF</button>
+</form>
+
+<h3>Logs</h3>
+<ul id="logs"></ul>
 
 <script>
-function openDoor() {
-    fetch("/door", { method: "POST" })
-    .then(r => r.text())
-    .then(d => console.log(d));
+async function loadLogs(){
+ let r = await fetch("/logs");
+ let data = await r.json();
+ let ul = document.getElementById("logs");
+ ul.innerHTML = "";
+ data.forEach(l => {
+   ul.innerHTML += `<li>${l.user} - ${l.action} - ${l.time}</li>`;
+ });
 }
-
-function lightOn() {
-    fetch("/light", {
-        method: "POST",
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: "state=ON"
-    });
-}
-
-function lightOff() {
-    fetch("/light", {
-        method: "POST",
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: "state=OFF"
-    });
-}
-
-function loadLogs() {
-    fetch("/logs")
-    .then(res => res.json())
-    .then(data => {
-        let ul = document.getElementById("logs");
-        ul.innerHTML = "";
-        data.forEach(log => {
-            ul.innerHTML += `<li>${log.time} - ${log.user} - ${log.action}</li>`;
-        });
-    });
-}
-
-setInterval(loadLogs, 2000);
-loadLogs();
+setInterval(loadLogs,2000);
 </script>
-</body>
-</html>

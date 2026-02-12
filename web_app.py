@@ -19,7 +19,8 @@ mqtt_client = mqtt.Client()
 mqtt_client.connect("broker.emqx.io", 1883, 60)
 mqtt_client.loop_start()
 
-# ===== LOGIN =====
+
+# ========== LOGIN ==========
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -32,40 +33,57 @@ def login():
             return redirect("/dashboard")
     return render_template("login.html")
 
-# ===== DASHBOARD =====
+
+# ========== DASHBOARD ==========
 @app.route("/dashboard")
 def dashboard():
-    return render_template("dashboard.html")
+    if "user" not in session:
+        return redirect("/")
+    return render_template("dashboard.html", user=session["user"], role=session["role"])
 
-# ===== DOOR =====
+
+# ========== CONTROL ==========
 @app.route("/door", methods=["POST"])
 def door():
-    mqtt_client.publish(
-        "namhome/door/cmd",
-        json.dumps({"user": session["user"]})
-    )
+    mqtt_client.publish("namhome/door/cmd", json.dumps({"user": session["user"]}))
     return "OK"
 
-# ===== LIGHT =====
 @app.route("/light", methods=["POST"])
 def light():
     state = request.form["state"]
-
-    mqtt_client.publish(
-        "namhome/light/cmd",
-        json.dumps({
-            "user": session["user"],
-            "state": state
-        })
-    )
+    mqtt_client.publish("namhome/light/cmd", json.dumps({"user": session["user"], "state": state}))
     return "OK"
 
-# ===== LOGS =====
+
+# ========== LOGS ==========
 @app.route("/logs")
 def logs():
-    data = list(logs_col.find({}, {"_id": 0}).sort("time", -1).limit(20))
+    data = list(logs_col.find({}, {"_id": 0}).sort("time", -1).limit(30))
     return jsonify(data)
+
+
+# ========== USER MGMT ==========
+@app.route("/users")
+def users():
+    if session["role"] != "admin":
+        return "No permission"
+    data = list(users_col.find({}, {"_id": 0}))
+    return render_template("users.html", users=data)
+
+@app.route("/add_user", methods=["POST"])
+def add_user():
+    users_col.insert_one({
+        "username": request.form["username"],
+        "password": request.form["password"],
+        "role": request.form["role"]
+    })
+    return redirect("/users")
+
+@app.route("/delete_user/<u>")
+def delete_user(u):
+    users_col.delete_one({"username": u})
+    return redirect("/users")
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
-

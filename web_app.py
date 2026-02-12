@@ -2,42 +2,31 @@ from flask import Flask, render_template, request, redirect, session
 import paho.mqtt.client as mqtt
 from pymongo import MongoClient
 import json
-from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "smarthome_secret"
 
-# ================== MONGODB ==================
-client = MongoClient("mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/")
-db = client["smarthome"]
+# ================= MONGODB =================
+client_db = MongoClient(
+    "mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/"
+)
+db = client_db["smarthome"]
 users_col = db["users"]
-logs_col = db["logs"]
 
-# ================== MQTT ==================
+# ================= MQTT =================
+BROKER = "broker.emqx.io"
+PORT = 1883
+
 mqtt_client = mqtt.Client()
 
 def on_connect(client, userdata, flags, rc):
     print("✅ MQTT Connected:", rc)
-    client.subscribe("namhome/#")  # nghe toàn bộ hệ thống
-
-def on_message(client, userdata, msg):
-    payload = msg.payload.decode()
-    print("RAW:", msg.topic, payload)
-
-    # Lưu log DB
-    logs_col.insert_one({
-        "topic": msg.topic,
-        "message": payload,
-        "time": datetime.now()
-    })
 
 mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
-
-mqtt_client.connect("broker.emqx.io", 1883, 60)
+mqtt_client.connect(BROKER, PORT, 60)
 mqtt_client.loop_start()
 
-# ================== LOGIN ==================
+# ================= LOGIN =================
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -52,64 +41,48 @@ def login():
 
     return render_template("login.html")
 
-# ================== DASHBOARD ==================
+# ================= DASHBOARD =================
 @app.route("/dashboard")
 def dashboard():
     if "user" not in session:
         return redirect("/")
-    return render_template("dashboard.html", user=session["user"], role=session["role"])
+    return render_template("dashboard.html", user=session["user"])
 
-# ================== DOOR ==================
+# ================= DOOR =================
 @app.route("/door/open")
 def door_open():
-    mqtt_client.publish("namhome/door/cmd",
-                        json.dumps({"user": session["user"]}))
+    mqtt_client.publish(
+        "namhome/door/cmd",
+        json.dumps({"user": session["user"]})
+    )
+    print("🚪 Web gửi mở cửa")
     return redirect("/dashboard")
 
-# ================== LIGHT ==================
+# ================= LIGHT =================
 @app.route("/light/on")
 def light_on():
-    mqtt_client.publish("namhome/light/cmd",
-                        json.dumps({"user": session["user"], "state": "ON"}))
+    mqtt_client.publish(
+        "namhome/light/cmd",
+        json.dumps({"user": session["user"], "state": "ON"})
+    )
+    print("💡 Web bật đèn")
     return redirect("/dashboard")
 
 @app.route("/light/off")
 def light_off():
-    mqtt_client.publish("namhome/light/cmd",
-                        json.dumps({"user": session["user"], "state": "OFF"}))
+    mqtt_client.publish(
+        "namhome/light/cmd",
+        json.dumps({"user": session["user"], "state": "OFF"})
+    )
+    print("💡 Web tắt đèn")
     return redirect("/dashboard")
 
-# ================== LOGS ==================
-@app.route("/logs")
-def logs():
-    data = logs_col.find().sort("time", -1)
-    return render_template("logs.html", logs=data)
-
-# ================== ADMIN USER ==================
-@app.route("/users", methods=["GET", "POST"])
-def users():
-    if session.get("role") != "admin":
-        return redirect("/dashboard")
-
-    if request.method == "POST":
-        new_user = request.form["username"]
-        pw = request.form["password"]
-        users_col.insert_one({"username": new_user, "password": pw, "role": "member"})
-
-    return render_template("users.html", users=users_col.find())
-
-@app.route("/delete/<username>")
-def delete_user(username):
-    if session.get("role") == "admin":
-        users_col.delete_one({"username": username})
-    return redirect("/users")
-
-# ================== LOGOUT ==================
+# ================= LOGOUT =================
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
 
-# ================== RUN ==================
+# ================= RUN =================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

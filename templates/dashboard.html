@@ -1,34 +1,27 @@
-<h2>SMART HOME</h2>
+<h2>Welcome {{user}} ({{role}})</h2>
 
-<button onclick="sendDoor()">🚪 Open Door</button>
-<button onclick="sendLight('on')">💡 Light ON</button>
-<button onclick="sendLight('off')">💡 Light OFF</button>
+<button onclick="door()">🚪 Open Door</button>
+<button onclick="light('ON')">💡 ON</button>
+<button onclick="light('OFF')">💡 OFF</button>
 
-<h3>Logs</h3>
-<ul id="logs"></ul>
+<h3 id="state">Device: --</h3>
 
 <script>
-async function sendLight(state){
-    await fetch("/light", {
-        method: "POST",
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: "state=" + state
-    });
+async function door(){await fetch("/door",{method:"POST"})}
+async function light(s){
+ await fetch("/light",{method:"POST",
+ headers:{"Content-Type":"application/x-www-form-urlencoded"},
+ body:"state="+s})
 }
 
-async function sendDoor(){
-    await fetch("/door", {method: "POST"});
+async function status(){
+ let r=await fetch("/status");let d=await r.json();
+ if(d.result) document.getElementById("state").innerText="Device: "+d.result
 }
-
-async function loadLogs(){
-    let r = await fetch("/logs");
-    let data = await r.json();
-    let ul = document.getElementById("logs");
-    ul.innerHTML="";
-    data.forEach(l=>{
-        ul.innerHTML += `<li>${l.user} - ${l.action} - ${l.time}</li>`;
-    });
-}
-
-setInterval(loadLogs,2000);
+setInterval(status,1000);
 </script>
+
+{% if role=="admin" %}
+<a href="/users">👤 Manage Users</a>
+{% endif %}
+<a href="/logs">📜 Logs</a>

@@ -1,80 +1,91 @@
 from flask import Flask, render_template, request, redirect, session, jsonify
 from pymongo import MongoClient
-import paho.mqtt.publish as publish
-import json
-from datetime import datetime
+import paho.mqtt.client as mqtt
+import json, os, datetime
 
 app = Flask(__name__)
-app.secret_key = "secret"
+app.secret_key = "smarthome_secret"
 
-# MongoDB
-MONGO_URI = "mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/"
-client = MongoClient(MONGO_URI)
-db = client["smarthome"]
+client_db = MongoClient(os.getenv("MONGO_URI"))
+db = client_db["smarthome"]
 users_col = db["users"]
 logs_col = db["logs"]
 
-BROKER = "broker.emqx.io"
+BROKER="broker.emqx.io"
+mqtt_client = mqtt.Client()
+
+last_status={}
+
+def on_connect(c,u,f,rc):
+    c.subscribe("smarthome/+/status")
+
+def on_message(c,u,msg):
+    global last_status
+    last_status=json.loads(msg.payload.decode())
+
+mqtt_client.on_connect=on_connect
+mqtt_client.on_message=on_message
+mqtt_client.connect(BROKER,1883,60)
+mqtt_client.loop_start()
 
 # LOGIN
-@app.route("/", methods=["GET", "POST"])
+@app.route("/",methods=["GET","POST"])
 def login():
-    if request.method == "POST":
-        user = users_col.find_one({"username": request.form["username"], "password": request.form["password"]})
+    if request.method=="POST":
+        u=request.form["username"]
+        p=request.form["password"]
+        user=users_col.find_one({"username":u,"password":p})
         if user:
-            session["user"] = user["username"]
-            session["role"] = user["role"]
+            session["user"]=u
+            session["role"]=user["role"]
             return redirect("/dashboard")
     return render_template("login.html")
 
-# DASHBOARD
 @app.route("/dashboard")
-def dashboard():
-    if "user" not in session:
-        return redirect("/")
-    return render_template("dashboard.html", role=session["role"])
+def dash():
+    if "user" not in session: return redirect("/")
+    return render_template("dashboard.html",user=session["user"],role=session["role"])
 
-# GỬI LỆNH MQTT
-def send_mqtt(topic, payload):
-    publish.single(topic, json.dumps(payload), hostname=BROKER, port=1883)
-
-@app.route("/light", methods=["POST"])
-def light():
-    state = request.form["state"]
-    send_mqtt("smarthome/light/cmd", {"user": session["user"], "state": state})
-    return "OK"
-
-@app.route("/door", methods=["POST"])
+# CONTROL
+@app.route("/door",methods=["POST"])
 def door():
-    send_mqtt("smarthome/door/cmd", {"user": session["user"], "action": "open"})
+    mqtt_client.publish("smarthome/door/cmd",json.dumps({"user":session["user"]}))
     return "OK"
 
-# LOGS API
+@app.route("/light",methods=["POST"])
+def light():
+    state=request.form["state"]
+    mqtt_client.publish("smarthome/light/cmd",
+                        json.dumps({"user":session["user"],"state":state}))
+    return "OK"
+
+@app.route("/status")
+def status():
+    return last_status
+
 @app.route("/logs")
 def logs():
-    data = list(logs_col.find({}, {"_id":0}).sort("time",-1))
-    return jsonify(data)
+    return jsonify(list(logs_col.find({},{"_id":0}).sort("time",-1).limit(20)))
 
-# USER MANAGEMENT (ADMIN)
+# ADMIN USER MANAGEMENT
 @app.route("/users")
 def users():
-    if session.get("role") != "admin":
-        return "Forbidden"
-    return render_template("users.html", users=list(users_col.find({}, {"_id":0})))
+    if session["role"]!="admin": return "No permission"
+    return render_template("users.html",users=list(users_col.find()))
 
-@app.route("/add_user", methods=["POST"])
+@app.route("/add_user",methods=["POST"])
 def add_user():
     users_col.insert_one({
-        "username": request.form["username"],
-        "password": request.form["password"],
-        "role": request.form["role"]
+        "username":request.form["username"],
+        "password":request.form["password"],
+        "role":request.form["role"]
     })
     return redirect("/users")
 
-@app.route("/delete_user/<username>")
-def delete_user(username):
-    users_col.delete_one({"username": username})
+@app.route("/delete/<u>")
+def delete(u):
+    users_col.delete_one({"username":u})
     return redirect("/users")
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+if __name__=="__main__":
+    app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))

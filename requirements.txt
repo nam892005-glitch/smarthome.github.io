@@ -1,4 +1,4 @@
-flask
-paho-mqtt
+Flask
+flask-cors
 pymongo
-gunicorn
+dnspython

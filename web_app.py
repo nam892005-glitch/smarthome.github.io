@@ -3,6 +3,7 @@ from flask_cors import CORS
 from pymongo import MongoClient
 import paho.mqtt.client as mqtt
 import json, os, datetime
+import ssl
 
 app = Flask(__name__)
 app.secret_key = "smarthome_secret"
@@ -15,9 +16,16 @@ users_col = db["users"]
 logs_col = db["logs"]
 
 # ===== MQTT =====
-mqtt_client = mqtt.Client()
-mqtt_client.connect("broker.emqx.io", 1883, 60)
+def on_connect(client, userdata, flags, rc):
+    print("WEB MQTT CONNECTED:", rc)
+
+mqtt_client = mqtt.Client(transport="websockets")
+mqtt_client.ws_set_options(path="/mqtt")
+mqtt_client.on_connect = on_connect
+
+mqtt_client.connect("broker.emqx.io", 8083, 60)  # dùng WebSocket
 mqtt_client.loop_start()
+
 
 # ========== LOGIN ==========
 @app.route("/", methods=["GET", "POST"])
@@ -81,3 +89,4 @@ def delete_user(u):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+

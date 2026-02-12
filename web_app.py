@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, session, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
 import paho.mqtt.client as mqtt
-import json, os
+import json, os, datetime
 
 app = Flask(__name__)
 app.secret_key = "smarthome_secret"
@@ -14,17 +14,12 @@ db = client["smarthome"]
 users_col = db["users"]
 logs_col = db["logs"]
 
-# ===== MQTT (WEBSOCKET CHO RENDER) =====
-def on_connect(client, userdata, flags, rc):
-    print("WEB MQTT CONNECTED:", rc)
-
-mqtt_client = mqtt.Client(transport="websockets")
-mqtt_client.ws_set_options(path="/mqtt")
-mqtt_client.on_connect = on_connect
-mqtt_client.connect("broker.emqx.io", 8083, 60)
+# ===== MQTT =====
+mqtt_client = mqtt.Client()
+mqtt_client.connect("broker.emqx.io", 1883, 60)
 mqtt_client.loop_start()
 
-# ================= LOGIN =================
+# ===== LOGIN =====
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -37,20 +32,19 @@ def login():
             return redirect("/dashboard")
     return render_template("login.html")
 
-# ================= DASHBOARD =================
+# ===== DASHBOARD =====
 @app.route("/dashboard")
 def dashboard():
-    if "user" not in session:
-        return redirect("/")
     return render_template("dashboard.html")
 
-# ================= CONTROL =================
+# ===== DOOR =====
 @app.route("/door", methods=["POST"])
 def door():
     mqtt_client.publish("namhome/door/cmd",
                         json.dumps({"user": session["user"]}))
     return "OK"
 
+# ===== LIGHT =====
 @app.route("/light", methods=["POST"])
 def light():
     state = request.form["state"]
@@ -58,7 +52,7 @@ def light():
                         json.dumps({"user": session["user"], "state": state}))
     return "OK"
 
-# ================= LOGS =================
+# ===== LOGS =====
 @app.route("/logs")
 def logs():
     data = list(logs_col.find({}, {"_id": 0}).sort("time", -1).limit(20))

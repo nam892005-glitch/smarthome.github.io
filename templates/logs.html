@@ -1,7 +1,124 @@
-<h2>System Logs</h2>
-<ul>
-{% for log in logs %}
-<li>{{log.time}} | {{log.user}} | {{log.action}}</li>
-{% endfor %}
-</ul>
-<a href="/dashboard">Back</a>
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SmartHome • Logs</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .log-list{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .log-item{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px 14px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background:#fff;
+      transition: box-shadow .12s ease, transform .12s ease;
+    }
+    .log-item:hover{
+      box-shadow: 0 12px 22px rgba(233,30,99,.10);
+      transform: translateY(-1px);
+    }
+    .log-left{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      min-width: 240px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--primary-soft);
+      color: var(--primary-700);
+      font-weight: 800;
+      font-size: 12.5px;
+      white-space:nowrap;
+    }
+    .meta{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background:#fff;
+      color: var(--muted);
+      font-size: 12.5px;
+      white-space:nowrap;
+    }
+    .action{
+      font-weight: 900;
+      color: var(--text);
+      flex: 1;
+      min-width: 220px;
+    }
+    .empty{
+      padding: 18px;
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+      background:#fff;
+      color: var(--muted);
+      text-align:center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="topbar">
+      <div class="brand">
+        <span class="dot"></span>
+        <span>SmartHome • Logs</span>
+      </div>
+      <div class="userchip">
+        <a class="btn btn-ghost" href="/dashboard" style="text-decoration:none;">← Back</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>System Logs</h3>
+      <p>Danh sách hoạt động gần đây (time / user / action).</p>
+
+      <div style="height:14px"></div>
+
+      {% if logs and logs|length > 0 %}
+        <ul class="log-list">
+          {% for log in logs %}
+          <li class="log-item">
+            <div class="log-left">
+              <span class="pill">🕒 {{log.time}}</span>
+              <span class="meta">👤 {{log.user}}</span>
+            </div>
+            <div class="action">📝 {{log.action}}</div>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="empty">Chưa có log nào.</div>
+      {% endif %}
+    </div>
+
+    <div class="nav" style="margin-top:14px;">
+      <a href="/dashboard">🏠 Dashboard</a>
+    </div>
+
+  </div>
+</body>
+</html>

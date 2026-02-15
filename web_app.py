@@ -97,5 +97,14 @@ def delete(u):
     users_col.delete_one({"username":u})
     return redirect("/users")
 
+@app.route("/seed_admin")
+def seed_admin():
+    users_col.update_one(
+        {"username": "admin"},
+        {"$set": {"username": "admin", "password": "123456", "role": "admin"}},
+        upsert=True
+    )
+    return "Seeded admin: admin / 123456"
+
 if __name__=="__main__":
     app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))

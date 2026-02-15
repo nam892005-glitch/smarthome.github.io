@@ -1,18 +1,202 @@
-<h2>User Management</h2>
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SmartHome • Users</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .form-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr 180px 140px;
+      gap:12px;
+      align-items:end;
+    }
+    @media (max-width: 860px){
+      .form-grid{ grid-template-columns: 1fr; }
+    }
 
-<form action="/add_user" method="post">
-<input name="username" placeholder="username">
-<input name="password" placeholder="password">
-<select name="role">
-<option value="member">member</option>
-<option value="admin">admin</option>
-</select>
-<button>Add</button>
-</form>
+    .field{ display:flex; flex-direction:column; gap:8px; }
+    .label{ font-weight: 900; font-size: 13px; color: var(--text); }
 
-<ul>
-{% for u in users %}
-<li>{{u.username}} ({{u.role}})
-<a href="/delete/{{u.username}}">❌</a></li>
-{% endfor %}
-</ul>
+    .input, .select{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border:1px solid var(--border);
+      outline:none;
+      background:#fff;
+      transition: box-shadow .12s ease, border-color .12s ease;
+      font-size: 14px;
+    }
+    .input:focus, .select:focus{
+      border-color: rgba(233,30,99,.55);
+      box-shadow: 0 0 0 5px rgba(233,30,99,.12);
+    }
+
+    .table{
+      width:100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      overflow:hidden;
+      border-radius: var(--radius);
+      border:1px solid var(--border);
+      background:#fff;
+    }
+    .table th{
+      background: var(--primary-soft);
+      color: var(--primary-700);
+      padding: 12px;
+      text-align:left;
+      font-size: 13px;
+      letter-spacing: .2px;
+    }
+    .table td{
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .row:hover{ background: #fff0f5; }
+
+    .role{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      font-weight: 900;
+      font-size: 12.5px;
+      white-space: nowrap;
+    }
+    .role-admin{
+      background: var(--primary);
+      color:#fff;
+      border-color: rgba(233,30,99,.25);
+    }
+    .role-member{
+      background: #fff;
+      color: var(--muted);
+    }
+
+    .danger-link{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border:1px solid var(--border);
+      background:#fff;
+      text-decoration:none;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+    .danger-link:hover{
+      background:#fff0f5;
+      box-shadow: 0 12px 22px rgba(233,30,99,.10);
+      transform: translateY(-1px);
+    }
+
+    .empty{
+      margin-top: 14px;
+      padding: 18px;
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+      background:#fff;
+      color: var(--muted);
+      text-align:center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="topbar">
+      <div class="brand">
+        <span class="dot"></span>
+        <span>SmartHome • User Management</span>
+      </div>
+      <div class="userchip">
+        <a class="btn btn-ghost" href="/dashboard" style="text-decoration:none;">← Back</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>Thêm người dùng</h3>
+      <p>Tạo user mới và phân quyền (member/admin).</p>
+
+      <div style="height:12px"></div>
+
+      <form action="/add_user" method="post">
+        <div class="form-grid">
+          <div class="field">
+            <div class="label">Username</div>
+            <input class="input" name="username" placeholder="username" required>
+          </div>
+
+          <div class="field">
+            <div class="label">Password</div>
+            <input class="input" name="password" placeholder="password" type="password" required>
+          </div>
+
+          <div class="field">
+            <div class="label">Role</div>
+            <select class="select" name="role" required>
+              <option value="member">member</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <button class="btn btn-primary" type="submit">➕ Add</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>Danh sách người dùng</h3>
+      <p>Xoá user bằng nút ❌.</p>
+
+      {% if users and users|length > 0 %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:55%;">User</th>
+              <th style="width:25%;">Role</th>
+              <th style="width:20%;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr class="row">
+              <td><b>{{u.username}}</b></td>
+              <td>
+                {% if u.role == "admin" %}
+                  <span class="role role-admin">👑 admin</span>
+                {% else %}
+                  <span class="role role-member">👤 member</span>
+                {% endif %}
+              </td>
+              <td>
+                <a class="danger-link" href="/delete/{{u.username}}" title="Delete {{u.username}}">❌</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty">Chưa có user nào.</div>
+      {% endif %}
+    </div>
+
+    <div class="nav" style="margin-top:14px;">
+      <a href="/dashboard">🏠 Dashboard</a>
+      <a href="/logs">📜 Logs</a>
+      <a href="/logout">🚪 Logout</a>
+    </div>
+
+  </div>
+</body>
+</html>

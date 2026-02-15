@@ -1,6 +1,127 @@
-<h2>Login</h2>
-<form method="post">
-  <input name="username" placeholder="Username">
-  <input name="password" placeholder="Password" type="password">
-  <button>Login</button>
-</form>
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartHome • Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <style>
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: linear-gradient(135deg,#ffe6f0,#fff5f8);
+    }
+
+    .login-card{
+      width:100%;
+      max-width:420px;
+      background:white;
+      padding:35px;
+      border-radius:24px;
+      box-shadow:0 20px 40px rgba(233,30,99,.2);
+    }
+
+    .logo{
+      width:60px;
+      height:60px;
+      border-radius:20px;
+      background:var(--primary);
+      margin-bottom:20px;
+      box-shadow:0 15px 30px rgba(233,30,99,.3);
+    }
+
+    h2{
+      margin:0;
+      font-weight:900;
+    }
+
+    .subtitle{
+      color:var(--muted);
+      margin-bottom:20px;
+    }
+
+    label{
+      font-weight:700;
+      font-size:14px;
+    }
+
+    input{
+      width:100%;
+      padding:12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      margin-top:6px;
+      margin-bottom:16px;
+    }
+
+    input:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 4px rgba(233,30,99,.15);
+    }
+
+    .btn-login{
+      width:100%;
+      padding:12px;
+      border:none;
+      border-radius:14px;
+      background:var(--primary);
+      color:white;
+      font-weight:800;
+      cursor:pointer;
+      transition:0.3s;
+    }
+
+    .btn-login:hover{
+      background:var(--primary-700);
+      transform:translateY(-1px);
+      box-shadow:0 10px 20px rgba(233,30,99,.25);
+    }
+
+    .back{
+      display:inline-block;
+      margin-top:15px;
+      color:var(--primary-700);
+      font-weight:700;
+      text-decoration:none;
+    }
+
+    .note{
+      margin-top:10px;
+      font-size:13px;
+      color:var(--muted);
+      text-align:center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-card">
+    <div class="logo"></div>
+
+    <h2>Đăng nhập</h2>
+    <div class="subtitle">SmartHome Admin Panel</div>
+
+    <form method="post">
+      <label>Username</label>
+      <input name="username" placeholder="Nhập username" required>
+
+      <label>Password</label>
+      <input type="password" name="password" placeholder="Nhập password" required>
+
+      <button class="btn-login">Login</button>
+    </form>
+
+    <a href="/dashboard" class="back">← Quay về Dashboard</a>
+
+    <div class="note">
+      Nếu quên mật khẩu, liên hệ admin hệ thống.
+    </div>
+  </div>
+
+</body>
+</html>

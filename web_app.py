@@ -73,9 +73,15 @@ def light():
 def status():
     return jsonify(last_status)
 
+# @app.route("/logs")
+# def logs():
+#     return jsonify(list(logs_col.find({},{"_id":0}).sort("time",-1).limit(20)))
 @app.route("/logs")
 def logs():
-    return jsonify(list(logs_col.find({},{"_id":0}).sort("time",-1).limit(20)))
+    if "user" not in session:
+        return redirect("/")
+    data = list(logs_col.find({}, {"_id": 0}).sort("time", -1).limit(50))
+    return render_template("logs.html", logs=data)
 
 # ===== ADMIN USER =====
 @app.route("/users")

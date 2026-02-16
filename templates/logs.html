@@ -106,7 +106,9 @@
               <span class="pill">🕒 {{log.time}}</span>
               <span class="meta">👤 {{log.user}}</span>
             </div>
-            <div class="action">📝 {{log.action}}</div>
+            <div class="action">
+  📝              {{ log.action or log.topic or (log.payload|string) or "—" }}
+</div>
           </li>
           {% endfor %}
         </ul>

@@ -5,7 +5,7 @@ import paho.mqtt.client as mqtt
 import json, os
 
 app = Flask(__name__)
-app.secret_key = "smarthome_secret"
+app.secret_key = "namhome_secret"
 
 MONGO_URI = "mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/"
 mongo = MongoClient(MONGO_URI)
@@ -19,7 +19,7 @@ last_status = {"result": "--"}
 # ===== RECEIVE STATUS =====
 mqtt_client = mqtt.Client()
 def on_connect(c,u,f,rc):
-    c.subscribe("smarthome/+/status")
+    c.subscribe("namhome/+/status")
 
 def on_message(c,u,msg):
     global last_status
@@ -56,7 +56,7 @@ def dash():
 # ===== CONTROL (PUBLISH SINGLE) =====
 @app.route("/door",methods=["POST"])
 def door():
-    publish.single("smarthome/door/cmd",
+    publish.single("namhome/door/cmd",
                    json.dumps({"user":session["user"]}),
                    hostname=BROKER,port=1883)
     return "OK"
@@ -64,7 +64,7 @@ def door():
 @app.route("/light",methods=["POST"])
 def light():
     state=request.form["state"]
-    publish.single("smarthome/light/cmd",
+    publish.single("namhome/light/cmd",
                    json.dumps({"user":session["user"],"state":state}),
                    hostname=BROKER,port=1883)
     return "OK"
@@ -114,3 +114,4 @@ def seed_admin():
 
 if __name__=="__main__":
     app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
+

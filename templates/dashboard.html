@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>SmartHome • Dashboard</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <!-- ⚠️ đổi sang css local -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -17,14 +19,14 @@
       </div>
 
       <div class="userchip">
-        <span class="badge">Xin chào <b>{{user}}</b></span>
-        <span class="badge">Vai trò: <b>{{role}}</b></span>
+        <span class="badge">Xin chào <b id="user"></b></span>
+        <span class="badge">Vai trò: <b id="role"></b></span>
       </div>
     </div>
 
     <div class="grid">
 
-      <!-- LEFT: Actions -->
+      <!-- LEFT -->
       <div class="card">
         <h3>Điều khiển nhanh</h3>
         <p>Bấm để gửi lệnh điều khiển. Trạng thái sẽ tự cập nhật mỗi giây.</p>
@@ -47,20 +49,17 @@
           <div class="badge">Auto refresh: 1s</div>
         </div>
 
-       
       </div>
 
-      <!-- RIGHT: Navigation -->
+      <!-- RIGHT -->
       <div class="card">
         <h3>Điều hướng</h3>
         <p>Chuyển nhanh tới các trang quản trị.</p>
 
         <div class="nav">
-          {% if role=="admin" %}
-            <a href="/users">👤 Manage Users</a>
-          {% endif %}
-          <a href="/logs">📜 Logs</a>
-          <a href="/logout">🚪 Logout</a>
+          <a href="users.html" id="userLink">👤 Manage Users</a>
+          <a href="logs.html">📜 Logs</a>
+          <a href="#" onclick="logout()">🚪 Logout</a>
         </div>
       </div>
 
@@ -68,25 +67,48 @@
   </div>
 
   <script>
-    async function door(){
-      await fetch("/door",{method:"POST"})
+    const API = "https://smarthome-github-io-7.onrender.com";
+
+    // ===== LOAD USER =====
+    const user = localStorage.getItem("user") || "Guest";
+    const role = localStorage.getItem("role") || "user";
+
+    document.getElementById("user").innerText = user;
+    document.getElementById("role").innerText = role;
+
+    // Ẩn admin nếu không phải admin
+    if(role !== "admin"){
+      document.getElementById("userLink").style.display = "none";
     }
+
+    // ===== CONTROL =====
+    async function door(){
+      await fetch(API + "/door",{method:"POST"})
+    }
+
     async function light(s){
-      await fetch("/light",{
+      await fetch(API + "/light",{
         method:"POST",
-        headers:{"Content-Type":"application/x-www-form-urlencoded"},
-        body:"state="+encodeURIComponent(s)
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({state:s})
       })
     }
 
+    // ===== STATUS =====
     async function update(){
-      let r = await fetch("/status");
+      let r = await fetch(API + "/status");
       let d = await r.json();
       document.getElementById("state").innerText = "Device: " + d.result;
     }
 
-    update();
     setInterval(update, 1000);
+    update();
+
+    // ===== LOGOUT =====
+    function logout(){
+      localStorage.clear();
+      window.location.href = "index.html";
+    }
   </script>
 
 </body>

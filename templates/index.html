@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartHome • Login</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: linear-gradient(135deg,#ffe6f0,#fff5f8);
+    }
+
+    .login-card{
+      width:100%;
+      max-width:420px;
+      background:white;
+      padding:35px;
+      border-radius:24px;
+      box-shadow:0 20px 40px rgba(233,30,99,.2);
+      color:black;
+    }
+
+    .logo{
+      width:60px;
+      height:60px;
+      border-radius:20px;
+      background:#e91e63;
+      margin-bottom:20px;
+    }
+
+    h2{
+      margin:0 0 10px;
+    }
+
+    input{
+      width:100%;
+      padding:12px;
+      border-radius:14px;
+      border:1px solid #ccc;
+      margin-top:6px;
+      margin-bottom:16px;
+    }
+
+    .btn-login{
+      width:100%;
+      padding:12px;
+      border:none;
+      border-radius:14px;
+      background:#e91e63;
+      color:white;
+      font-weight:800;
+      cursor:pointer;
+    }
+
+    .note{
+      margin-top:10px;
+      font-size:13px;
+      color:#666;
+      text-align:center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-card">
+    <div class="logo"></div>
+
+    <h2>Đăng nhập</h2>
+    <div>SmartHome Admin Panel</div>
+
+    <form onsubmit="login(event)">
+      <label>Username</label>
+      <input id="user" required>
+
+      <label>Password</label>
+      <input id="pass" type="password" required>
+
+      <button class="btn-login">Login</button>
+    </form>
+
+    <div class="note">
+      Nếu quên mật khẩu, liên hệ admin.
+    </div>
+  </div>
+
+<script>
+const API = "https://smarthome-github-io-7.onrender.com"; // ✅ link của bạn
+
+function login(e){
+  e.preventDefault();
+
+  fetch(API + "/login", {
+    method:"POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      username: document.getElementById("user").value,
+      password: document.getElementById("pass").value
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success){
+      localStorage.setItem("user", data.user);
+      localStorage.setItem("role", data.role || "user");
+
+      window.location.href = "dashboard.html";
+    } else {
+      alert("Sai tài khoản hoặc mật khẩu!");
+    }
+  })
+  .catch(()=>{
+    alert("Không kết nối được server!");
+  });
+}
+</script>
+
+</body>
+</html>

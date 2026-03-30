@@ -1,0 +1,118 @@
+:root {
+  --primary: #e91e63;
+  --primary-700: #c2185b;
+  --primary-soft: #ffe4ec;
+
+  --bg: #0f172a;
+  --card: #1e293b;
+
+  --text: #ffffff;
+  --muted: #94a3b8;
+  --border: #334155;
+
+  --radius: 14px;
+}
+
+/* RESET */
+body {
+  font-family: Arial;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+}
+
+/* LAYOUT */
+.container {
+  padding: 20px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* CARD */
+.card {
+  background: var(--card);
+  padding: 20px;
+  border-radius: var(--radius);
+  margin-top: 20px;
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+/* BUTTON */
+.btn {
+  padding: 10px 15px;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-soft {
+  background: #10b981;
+  color: white;
+}
+
+.btn-ghost {
+  background: #ef4444;
+  color: white;
+}
+
+/* NAV */
+.nav a {
+  display: block;
+  margin: 8px 0;
+  color: #60a5fa;
+  text-decoration: none;
+}
+
+/* BADGE */
+.badge {
+  background: #334155;
+  padding: 5px 10px;
+  border-radius: 6px;
+}
+
+/* VALUE TEXT */
+.value {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+/* INPUT */
+input, select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+/* TABLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+  border: 1px solid var(--border);
+}
+
+/* LOGIN riêng (fix màu sáng) */
+.login-card {
+  background: white;
+  color: black;
+}

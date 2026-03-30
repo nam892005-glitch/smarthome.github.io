@@ -1,69 +1,51 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from pymongo import MongoClient
-import paho.mqtt.publish as publish
-import paho.mqtt.client as mqtt
-import json, os
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartHome</title>
+</head>
+<body>
+    <h1>SmartHome Control</h1>
 
-app = Flask(__name__)
-CORS(app)
+    <button onclick="openDoor()">Mở cửa</button>
+    <button onclick="lightOn()">Bật đèn</button>
+    <button onclick="lightOff()">Tắt đèn</button>
 
-# ===== CONFIG =====
-MONGO_URI = "mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/"
-mongo = MongoClient(MONGO_URI)
-db = mongo["smarthome"]
-logs_col = db["logs"]
+    <h2 id="status">Status: --</h2>
 
-BROKER = "broker.emqx.io"
-last_status = {"result": "--"}
+<script>
+const API = "https://your-render-url.onrender.com"; // THAY LINK
 
-# ===== MQTT RECEIVE =====
-mqtt_client = mqtt.Client()
+function openDoor(){
+    fetch(API + "/door", {method:"POST"});
+}
 
-def on_connect(c,u,f,rc):
-    c.subscribe("smarthome/+/status")
+function lightOn(){
+    fetch(API + "/light", {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({state:"ON"})
+    });
+}
 
-def on_message(c,u,msg):
-    global last_status
-    last_status = json.loads(msg.payload.decode())
+function lightOff(){
+    fetch(API + "/light", {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({state:"OFF"})
+    });
+}
 
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
-mqtt_client.connect(BROKER,1883,60)
-mqtt_client.loop_start()
+function getStatus(){
+    fetch(API + "/status")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("status").innerText =
+            "Status: " + data.result;
+    });
+}
 
-# ===== API =====
+setInterval(getStatus, 2000);
+</script>
 
-@app.route("/")
-def home():
-    return "SmartHome API Running"
-
-@app.route("/door", methods=["POST"])
-def door():
-    publish.single("smarthome/door/cmd",
-                   json.dumps({"user": "web"}),
-                   hostname=BROKER, port=1883)
-    return jsonify({"msg": "door sent"})
-
-@app.route("/light", methods=["POST"])
-def light():
-    data = request.json
-    state = data.get("state","ON")
-
-    publish.single("smarthome/light/cmd",
-                   json.dumps({"user":"web","state":state}),
-                   hostname=BROKER, port=1883)
-
-    return jsonify({"msg": "light sent"})
-
-@app.route("/status")
-def status():
-    return jsonify(last_status)
-
-@app.route("/logs")
-def logs():
-    return jsonify(list(logs_col.find({},{"_id":0}).sort("time",-1).limit(20)))
-
-# ===== RUN =====
-if __name__=="__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT",10000)))
+</body>
+</html>

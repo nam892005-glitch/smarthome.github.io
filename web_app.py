@@ -6,64 +6,124 @@ import paho.mqtt.client as mqtt
 import json, os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # ✅ cho phép Netlify gọi API
 
-# ===== CONFIG =====
+# ================== CONFIG ==================
+BROKER = "broker.emqx.io"
+
 MONGO_URI = "mongodb+srv://smarthome_user:123@cluster0.3s47ygi.mongodb.net/"
 mongo = MongoClient(MONGO_URI)
 db = mongo["smarthome"]
+users_col = db["users"]
 logs_col = db["logs"]
 
-BROKER = "broker.emqx.io"
 last_status = {"result": "--"}
 
-# ===== MQTT RECEIVE =====
+# ================== MQTT RECEIVE ==================
 mqtt_client = mqtt.Client()
 
-def on_connect(c,u,f,rc):
-    c.subscribe("smarthome/+/status")
+def on_connect(client, userdata, flags, rc):
+    print("🌍 MQTT CONNECTED:", rc)
+    client.subscribe("namhome/+/status")
 
-def on_message(c,u,msg):
+def on_message(client, userdata, msg):
     global last_status
-    last_status = json.loads(msg.payload.decode())
+    try:
+        last_status = json.loads(msg.payload.decode())
+    except:
+        last_status = {"result": msg.payload.decode()}
 
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
-mqtt_client.connect(BROKER,1883,60)
+mqtt_client.connect(BROKER, 1883, 60)
 mqtt_client.loop_start()
 
-# ===== API =====
+# ================== LOGIN API ==================
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json
+    user = users_col.find_one({
+        "username": data.get("username"),
+        "password": data.get("password")
+    })
 
-@app.route("/")
-def home():
-    return "SmartHome API Running"
+    if user:
+        return jsonify({
+            "success": True,
+            "user": user["username"],
+            "role": user.get("role", "user")
+        })
+    return jsonify({"success": False})
 
+# ================== CONTROL ==================
 @app.route("/door", methods=["POST"])
 def door():
-    publish.single("smarthome/door/cmd",
-                   json.dumps({"user": "web"}),
-                   hostname=BROKER, port=1883)
-    return jsonify({"msg": "door sent"})
+    data = request.json or {}
+    publish.single(
+        "namhome/door/cmd",
+        json.dumps({"user": data.get("user", "web")}),
+        hostname=BROKER, port=1883
+    )
+    return jsonify({"success": True})
 
 @app.route("/light", methods=["POST"])
 def light():
     data = request.json
-    state = data.get("state","ON")
-
-    publish.single("smarthome/light/cmd",
-                   json.dumps({"user":"web","state":state}),
-                   hostname=BROKER, port=1883)
-
-    return jsonify({"msg": "light sent"})
+    publish.single(
+        "namhome/light/cmd",
+        json.dumps({
+            "user": data.get("user", "web"),
+            "state": data.get("state")
+        }),
+        hostname=BROKER, port=1883
+    )
+    return jsonify({"success": True})
 
 @app.route("/status")
 def status():
     return jsonify(last_status)
 
+# ================== LOGS ==================
 @app.route("/logs")
-def logs():
-    return jsonify(list(logs_col.find({},{"_id":0}).sort("time",-1).limit(20)))
+def get_logs():
+    data = list(logs_col.find({}, {"_id": 0}).sort("time", -1).limit(50))
+    return jsonify({"logs": data})
 
-# ===== RUN =====
-if __name__=="__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT",10000)))
+# ================== USERS ==================
+@app.route("/users")
+def get_users():
+    data = list(users_col.find({}, {"_id": 0}))
+    return jsonify({"users": data})
+
+@app.route("/add_user", methods=["POST"])
+def add_user():
+    data = request.json
+    users_col.insert_one({
+        "username": data["username"],
+        "password": data["password"],
+        "role": data["role"]
+    })
+    return jsonify({"success": True})
+
+@app.route("/delete/<username>", methods=["DELETE"])
+def delete_user(username):
+    users_col.delete_one({"username": username})
+    return jsonify({"success": True})
+
+# ================== INIT ADMIN ==================
+@app.route("/seed_admin")
+def seed_admin():
+    users_col.update_one(
+        {"username": "admin"},
+        {"$set": {
+            "username": "admin",
+            "password": "123456",
+            "role": "admin"
+        }},
+        upsert=True
+    )
+    return "Admin created: admin / 123456"
+
+# ================== RUN ==================
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
